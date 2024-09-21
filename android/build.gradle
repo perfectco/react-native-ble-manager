@@ -55,5 +55,6 @@ repositories {
 
 dependencies {
 	implementation "com.facebook.react:react-android:0.75.3"
+	testImplementation 'junit:junit:4.13.2'
 //	implementation "org.jetbrains.trove4j: trove4j: 20160824"
 }
