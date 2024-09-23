@@ -3,6 +3,7 @@ package it.innove;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 
 import com.facebook.react.bridge.Callback;
@@ -15,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
+import org.robolectric.shadows.ShadowLooper;
 
 import java.util.UUID;
 
@@ -37,6 +39,12 @@ public class PeripheralTest {
   @Mock
   private BluetoothGatt gatt;
 
+  @Mock
+  private BluetoothGattService service;
+
+  @Mock
+  private BluetoothGattCharacteristic characteristic;
+
   @Test
   public void basicConstructor() {
     new Peripheral(device, reactContext);
@@ -46,6 +54,8 @@ public class PeripheralTest {
   public void write() {
     final UUID serviceId = UUID.randomUUID();
     final UUID characteristicId = UUID.randomUUID();
+    when(gatt.getService(serviceId)).thenReturn(service);
+    when(service.getCharacteristic(characteristicId)).thenReturn(characteristic);
     final byte[] data = {};
     final Callback callback = mock();
     final Peripheral peripheral = new Peripheral(device, reactContext);
@@ -53,5 +63,7 @@ public class PeripheralTest {
 
     peripheral.write(serviceId, characteristicId, data, 20, 10, callback, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
 
+    verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+    verify(characteristic).setValue(data);
   }
 }
