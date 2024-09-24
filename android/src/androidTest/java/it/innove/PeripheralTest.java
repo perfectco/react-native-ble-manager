@@ -11,20 +11,15 @@ import com.facebook.react.bridge.ReactContext;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
-import org.robolectric.shadows.ShadowLooper;
 
 import java.util.UUID;
 
-import androidx.test.ext.junit.runners.AndroidJUnit4;
-
 import static org.mockito.Mockito.*;
 
-@RunWith(AndroidJUnit4.class)
 public class PeripheralTest {
 
   @Rule
@@ -57,7 +52,7 @@ public class PeripheralTest {
     when(gatt.getService(serviceId)).thenReturn(service);
     when(service.getCharacteristic(characteristicId)).thenReturn(characteristic);
     final byte[] data = {};
-    final Callback callback = mock();
+    final Callback callback = mock(Callback.class);
     final Peripheral peripheral = new Peripheral(device, reactContext);
     peripheral.onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
 
