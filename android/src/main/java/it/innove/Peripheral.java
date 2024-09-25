@@ -75,7 +75,7 @@ public class Peripheral extends BluetoothGattCallback {
     private LinkedList<Callback> requestMTUCallbacks = new LinkedList<>();
 
     private final Queue<Runnable> commandQueue = new ConcurrentLinkedQueue<>();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Handler mainHandler;
     private Runnable discoverServicesRunnable;
     private boolean commandQueueBusy = false;
 
@@ -87,12 +87,21 @@ public class Peripheral extends BluetoothGattCallback {
         this.advertisingRSSI = advertisingRSSI;
         this.advertisingDataBytes = scanRecord;
         this.reactContext = reactContext;
+        this.mainHandler = new Handler(Looper.getMainLooper());
     }
 
     public Peripheral(BluetoothDevice device, ReactContext reactContext) {
         this.device = device;
         this.bufferedCharacteristics = new ConcurrentHashMap<String, NotifyBufferContainer>();
         this.reactContext = reactContext;
+        this.mainHandler = new Handler(Looper.getMainLooper());
+    }
+
+    public Peripheral(BluetoothDevice device, ReactContext reactContext, Handler handler) {
+        this.device = device;
+        this.bufferedCharacteristics = new ConcurrentHashMap<String, NotifyBufferContainer>();
+        this.reactContext = reactContext;
+        this.mainHandler = handler;
     }
 
     private void sendEvent(String eventName, @Nullable WritableMap params) {
