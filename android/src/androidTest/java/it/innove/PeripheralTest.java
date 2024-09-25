@@ -69,8 +69,7 @@ public class PeripheralTest {
     SoLoader.init(InstrumentationRegistry.getInstrumentation().getTargetContext(), false);
   }
 
-  @Before
-  public void beforeEach() {
+  public void stubMocks() {
     when(reactContext.getJSModule(any())).thenAnswer(i -> mock(i.getArgument(0)));
     when(handler.post(any())).thenAnswer(i -> { i.getArgument(0, Runnable.class).run(); return true; });
     when(gatt.getService(serviceId)).thenReturn(service);
@@ -86,6 +85,7 @@ public class PeripheralTest {
 
   @Test
   public void write() {
+    stubMocks();
     final byte[] data = {};
     final InOrder inOrder = inOrder(gatt, characteristic, callback);
     final Peripheral peripheral = new Peripheral(device, reactContext, handler);
@@ -102,6 +102,7 @@ public class PeripheralTest {
 
   @Test
   public void writeLarge() {
+    stubMocks();
     final byte[] data = new byte[MAX_BYTES + 1];
     final InOrder inOrder = inOrder(gatt, characteristic, callback);
     final Peripheral peripheral = new Peripheral(device, reactContext, handler);
@@ -132,6 +133,7 @@ public class PeripheralTest {
 
   @Test
   public void writeMultipleLarge() {
+    stubMocks();
     final byte[] dataA = new byte[MAX_BYTES + 1];
     final byte[] dataB = new byte[MAX_BYTES + 1];
     Arrays.fill(dataB, (byte) 1);
