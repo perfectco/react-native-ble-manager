@@ -22,6 +22,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -107,14 +108,83 @@ public class PeripheralTest {
     peripheral.onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
 
     peripheral.write(serviceId, characteristicId, data, MAX_BYTES, 10, callback, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-    peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
-    peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
 
-    inOrder.verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-    inOrder.verify(characteristic).setValue(new byte[MAX_BYTES]);
-    inOrder.verify(gatt).writeCharacteristic(characteristic);
-    inOrder.verify(characteristic).setValue(new byte[1]);
-    inOrder.verify(gatt).writeCharacteristic(characteristic);
-    inOrder.verify(callback).invoke();
+    {
+      // verify wrote chunk 1
+      inOrder.verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+      inOrder.verify(characteristic).setValue(new byte[MAX_BYTES]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify wrote chunk 2
+      inOrder.verify(characteristic).setValue(new byte[1]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify complete
+      inOrder.verify(callback).invoke();
+    }
+  }
+
+  @Test
+  public void writeMultipleLarge() {
+    final byte[] dataA = new byte[MAX_BYTES + 1];
+    final byte[] dataB = new byte[MAX_BYTES + 1];
+    Arrays.fill(dataB, (byte) 1);
+    final Callback callbackA = mock(Callback.class);
+    final Callback callbackB = mock(Callback.class);
+    final InOrder inOrder = inOrder(gatt, characteristic, callbackA, callbackB);
+    final Peripheral peripheral = new Peripheral(device, reactContext, handler);
+    peripheral.onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
+
+    // send multiple large messages in quick succession, should enqueue them
+    peripheral.write(serviceId, characteristicId, dataA, MAX_BYTES, 10, callbackA, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+    peripheral.write(serviceId, characteristicId, dataB, MAX_BYTES, 10, callbackB, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+
+    // message 1
+    {
+      // verify wrote chunk 1
+      inOrder.verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+      inOrder.verify(characteristic).setValue(new byte[MAX_BYTES]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify wrote chunk 2
+      inOrder.verify(characteristic).setValue(new byte[1]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify completed
+      inOrder.verify(callbackA).invoke();
+    }
+
+    // message 2
+    {
+      // verify wrote chunk 1
+      inOrder.verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+      inOrder.verify(characteristic).setValue(Arrays.copyOfRange(dataB, 0, MAX_BYTES));
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify wrote chunk 2
+      inOrder.verify(characteristic).setValue(Arrays.copyOfRange(dataB, MAX_BYTES, MAX_BYTES + 1));
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify completed
+      inOrder.verify(callbackB).invoke();
+    }
   }
 }
