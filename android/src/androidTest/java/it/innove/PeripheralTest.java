@@ -189,4 +189,51 @@ public class PeripheralTest {
       inOrder.verify(callbackB).invoke();
     }
   }
+
+  @Test
+  public void doAnythingAfterMultiWrite() {
+    stubMocks();
+    when(gatt.readRemoteRssi()).thenReturn(true);
+    final byte[] data = new byte[MAX_BYTES + 1];
+    final Callback writeCallback = mock(Callback.class);
+    final Callback rssiCallback = mock(Callback.class);
+    final InOrder inOrder = inOrder(gatt, characteristic, writeCallback, rssiCallback);
+    final Peripheral peripheral = new Peripheral(device, reactContext, handler);
+    peripheral.onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
+
+    peripheral.write(serviceId, characteristicId, data, MAX_BYTES, 10, writeCallback, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+    peripheral.readRSSI(rssiCallback);
+
+    // message 1
+    {
+      // verify wrote chunk 1
+      inOrder.verify(characteristic).setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+      inOrder.verify(characteristic).setValue(new byte[MAX_BYTES]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify wrote chunk 2
+      inOrder.verify(characteristic).setValue(new byte[1]);
+      inOrder.verify(gatt).writeCharacteristic(characteristic);
+
+      // ack
+      peripheral.onCharacteristicWrite(gatt, characteristic, BluetoothGatt.GATT_SUCCESS);
+
+      // verify completed
+      inOrder.verify(writeCallback).invoke();
+    }
+
+    {
+      // verify request RSSI
+      inOrder.verify(gatt).readRemoteRssi();
+
+      // read RSSI
+      peripheral.onReadRemoteRssi(gatt, -50, BluetoothGatt.GATT_SUCCESS);
+
+      // verify completed
+      inOrder.verify(rssiCallback).invoke(null, -50);
+    }
+  }
 }
